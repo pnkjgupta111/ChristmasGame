@@ -7,21 +7,22 @@ import java.util.stream.IntStream;
 import entities.Chit;
 import entities.Guest;
 import entities.Santa;
+import entities.SantaHelper;
 import factory.CriteriaFactory;
 import factory.CriteriaFactoryImpl;
-import message.Message;
 import message.MessageBroker;
 import model.CriteriaType;
 import utils.CommonUtils;
 
 public class ChristmasGame {
-    private static final int MIN_NUMBER_OF_YELLS = 5;
+    private static final int MIN_NUMBER_OF_YELLS = 7;
     private CriteriaFactory criteriaFactory;
     private MessageBroker messageBroker;
     private Santa santa;
     private List<Chit> chits;
     private List<Guest> guests;
     private int numberOfYells;
+    private SantaHelper santaHelper;
 
     public ChristmasGame() {
         prepareGameEntities();
@@ -32,42 +33,27 @@ public class ChristmasGame {
         System.out.println(String.format("Ready!!!!! Santa will yell %s number of times", numberOfYells));
         criteriaFactory = new CriteriaFactoryImpl();
         messageBroker = new MessageBroker();
-        santa = new Santa(messageBroker);
         chits = createChits();
+        santaHelper = new SantaHelper(chits);
         guests = createGuests();
+        santa = new Santa(messageBroker, santaHelper);
     }
 
     public void launch() {
-        List<Message> messages = IntStream.range(0, numberOfYells).mapToObj(i -> santa.yell()).collect(Collectors.toList());
-        printWinners(messages);
+        IntStream.range(0, numberOfYells).forEach(i -> santa.yell());
+        printWinners();
     }
 
-    private boolean isWinner(final Guest guest, final List<Message> messages) {
-        List<Message> expectedBalls = getBallsMatchingChitCriteria(guest.getChit(), messages);
-        List<Message> actualBallsNotedByGuest = getBallsMatchingChitCriteria(guest.getChit(), guest.getChit().getMatchingBalls());
-        return expectedBalls.equals(actualBallsNotedByGuest);
-    }
-
-    private List<Message> getBallsMatchingChitCriteria(final Chit chit, final List<Message> balls) {
-        return balls
-                .stream()
-                .filter(message -> chit.isSatisfyChitCriteria(message.getBallNumber(), message.getFloor()))
-                .collect(Collectors.toList());
-    }
-
-    private void printWinners(final List<Message> messages) {
+    private void printWinners() {
         System.out.println("\nWINNERS:-");
-        guests
-                .stream()
-                .filter(guest -> isWinner(guest, messages))
-                .forEach(guest -> System.out.println(String.format("Guest%s wins the game", guest.getGuestId())));
+        santaHelper.getWinners().forEach(guestId -> System.out.println(String.format("Guest%s wins the game", guestId)));
     }
 
     private List<Guest> createGuests() {
         AtomicInteger i = new AtomicInteger();
         return chits
                 .stream()
-                .map(chit -> new Guest(messageBroker, chit, i.getAndIncrement() + ""))
+                .map(chit -> new Guest(messageBroker, chit, i.getAndIncrement() + "", santaHelper))
                 .peek(guest -> System.out.println(String.format("Guest%s joins the game", guest.getGuestId())))
                 .collect(Collectors.toList());
     }
