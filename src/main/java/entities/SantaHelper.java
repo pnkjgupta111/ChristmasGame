@@ -1,9 +1,9 @@
 package entities;
 
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.stream.Collectors;
 
 import message.Message;
@@ -13,7 +13,7 @@ public class SantaHelper {
     private Set<Chit> winningChits;
 
     public SantaHelper(final List<Chit> chits) {
-        this.winningChits = new CopyOnWriteArraySet<>(chits);
+        this.winningChits = new HashSet<>(chits);
     }
 
     public Set<String> getWinners() {
@@ -29,11 +29,13 @@ public class SantaHelper {
     }
 
     public void verifyChits() {
-        for (Chit chit : winningChits) {
-            boolean shouldNoteDownCurrent = chit.isSatisfyChitCriteria(currentBall.getBallNumber(), currentBall.getFloor());
-            if (shouldNoteDownCurrent && !currentBall.equals(chit.getLatestNotedDownBall())) {
-                winningChits.remove(chit);
-                System.out.println(String.format("[DEBUG] Guest%s cannot win the game", chit.getAssignedGuestId()));
+        Iterator<Chit> iterator = winningChits.iterator();
+        while (iterator.hasNext()) {
+            Chit currentChit = iterator.next();
+            boolean shouldNoteDownCurrent = currentChit.isSatisfyChitCriteria(currentBall.getBallNumber(), currentBall.getFloor());
+            if (shouldNoteDownCurrent && !currentBall.equals(currentChit.getLatestNotedDownBall())) {
+                System.out.println(String.format("[DEBUG] Guest%s cannot win the game", currentChit.getAssignedGuestId()));
+                iterator.remove();
             }
         }
     }
